@@ -17,3 +17,4 @@ openpyxl
 ipywidgets
 plotly
 streamlit
+pykalman

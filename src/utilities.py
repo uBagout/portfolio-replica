@@ -217,7 +217,6 @@ def return_figures():
     """
     figurenames = [
         "lll1imputed.png",
-        "corrmatrix.png",
     ]
 
     filepath = "figures/"

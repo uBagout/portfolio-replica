@@ -153,7 +153,6 @@ class KalmanRegressor(BaseEstimator, RegressorMixin):
 
 
         return np.dot(X, self.coef_)
-    
 
 def get_model(model_name: str, **params):
     """
