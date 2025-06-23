@@ -243,8 +243,7 @@ def show_tuning():
                 metric_key='information_ratio',
                 save_dir=results_dir
             )
-        st.success("Models tuned successfully!")
-        st.markdown("### Head to Evaluation to see the best results")
+        st.success("Models tuned successfully! Head to Evaluation to see the results")
 
 
 def show_evaluation():

@@ -18,3 +18,4 @@ ipywidgets
 plotly
 streamlit
 pykalman
+sktime
