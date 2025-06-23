@@ -9,29 +9,44 @@ import numpy as np
 import seaborn as sns
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
-def apply_dark_theme(fig, ax): #transparency with streamlit
+def apply_theme(fig, ax, theme): #transparency with streamlit
     fig.patch.set_alpha(0.0)
     ax.patch.set_alpha(0.0)
-    ax.title.set_color('white')
-    ax.xaxis.label.set_color('white')
-    ax.yaxis.label.set_color('white')
-    ax.tick_params(colors='white')
-    for spine in ax.spines.values():
-        spine.set_color('white')
+
+    if theme == "Dark":
+        fig.patch.set_facecolor('#222222')
+        ax.set_facecolor('#222222')
+        ax.title.set_color('white')
+        ax.xaxis.label.set_color('white')
+        ax.yaxis.label.set_color('white')
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values():
+            spine.set_color('white')
+
+    else:
+        fig.patch.set_facecolor('white')
+        ax.set_facecolor('white')
+        ax.title.set_color('black')
+        ax.xaxis.label.set_color('black')
+        ax.yaxis.label.set_color('black')
+        ax.tick_params(colors='black')
+        for spine in ax.spines.values():
+            spine.set_color('black')
+
     ax.grid(True, color='gray', linestyle='--', linewidth=0.5)
 
-def plot_correlation_matrix_st(df: pd.DataFrame, method: str = "pearson", title: str = None):
+def plot_correlation_matrix_st(df: pd.DataFrame, method: str = "pearson", title: str = None, theme="Light"):
     corr = df.corr(method=method)
     fig, ax = plt.subplots(figsize=(8, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     sns.heatmap(corr, annot=False, fmt=".2f", square=True, ax=ax)
     ax.set_title(title or f"{method.title()} Correlation Matrix")
     plt.tight_layout()
     return fig
 
-def plot_series_st(df: pd.DataFrame, col: str, title: str = None):
+def plot_series_st(df: pd.DataFrame, col: str, title: str = None, theme="Light"):
     fig, ax = plt.subplots(figsize=(10, 5))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
 
     df[col].plot(ax=ax, alpha=1.0)
     ax.set_title(title or f"Time Series: {col}")
@@ -40,10 +55,10 @@ def plot_series_st(df: pd.DataFrame, col: str, title: str = None):
     plt.tight_layout()
     return fig
 
-def plot_acf_pacf_st(series: pd.Series, lags: int, title_prefix: str = None):
+def plot_acf_pacf_st(series: pd.Series, lags: int, title_prefix: str = None, theme="Light"):
     fig, axes = plt.subplots(2, 1, figsize=(8, 6))
     for ax in axes:
-        apply_dark_theme(fig, ax)
+        apply_theme(fig, ax, theme)
     plot_acf(series.dropna(), lags=lags, ax=axes[0])
     plot_pacf(series.dropna(), lags=lags, ax=axes[1])
     axes[0].set_title((title_prefix or "") + " ACF")
@@ -51,11 +66,11 @@ def plot_acf_pacf_st(series: pd.Series, lags: int, title_prefix: str = None):
     plt.tight_layout()
     return fig
 
-def plot_rolling_stats_st(series: pd.Series, window: int = 20, title: str = None):
+def plot_rolling_stats_st(series: pd.Series, window: int = 20, title: str = None, theme="Light"):
     rolling_mean = series.rolling(window).mean()
     rolling_std = series.rolling(window).std()
     fig, ax = plt.subplots()
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     series.plot(ax=ax, alpha=0.5, label="Original")
     rolling_mean.plot(ax=ax, label=f"Mean ({window})")
     rolling_std.plot(ax=ax, label=f"Std ({window})")
@@ -126,7 +141,7 @@ def compute_aggregate_metrics(
 
 
 
-def display_backtest_result(result):
+def display_backtest_result(result, theme="Light"):
     """
     Display aggregate metrics and plot cumulative returns for a backtest result.
     """
@@ -142,7 +157,7 @@ def display_backtest_result(result):
     cum_replica = (1 + result.replica_returns).cumprod()
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     ax.plot(cum_target, label="Target Index")
     ax.plot(cum_replica, label="Replica Portfolio")
     ax.set_title("Cumulative Returns — Backtest Result")
@@ -168,7 +183,7 @@ def prepare_plotting_config(result_model: BacktestResult, config_params: dict) -
     })
     return config
 
-def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
+def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None, theme="Light"):
     """
     Plots detailed metrics and diagnostic charts for the best configuration using Streamlit.
     """
@@ -210,7 +225,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- Cumulative Returns ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     ax.plot(best_config['cumulative_target'], label='Target index', color='blue')
     ax.plot(best_config['cumulative_replica'], label='Replica portfolio', color='red')
     ax.set_title('Cumulative returns: target vs replica')
@@ -223,7 +238,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- Drawdowns ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     target_drawdown = 1 - best_config['cumulative_target'] / best_config['cumulative_target'].cummax()
     replica_drawdown = 1 - best_config['cumulative_replica'] / best_config['cumulative_replica'].cummax()
     ax.plot(target_drawdown, label='Target index', color='blue')
@@ -238,7 +253,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- Gross Exposure over Time ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     gross_exposure_series = pd.Series(best_config['gross_exposures'], index=best_config['replica_returns'].index)
     ax.plot(gross_exposure_series, color='purple')
     ax.set_title('Gross exposure over time')
@@ -250,7 +265,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- VaR over Time ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     var_series = pd.Series(best_config['var'], index=best_config['replica_returns'].index)
     ax.plot(var_series, color='orange')
     ax.axhline(y=max_var_threshold, color='r', linestyle='--',
@@ -265,7 +280,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- Scaling Factors over Time ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     scaling_series = pd.Series(best_config['rescale_history'], index=best_config['replica_returns'].index)
     ax.plot(scaling_series, color='green')
     ax.set_title('Risk scaling factors over time')
@@ -282,7 +297,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
     top_weights = weights_df.abs().mean().sort_values(ascending=False).head(10).index
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     for col in top_weights:
         ax.plot(weights_df[col], label=col)
     ax.set_title('Top 10 portfolio weights over time')
@@ -295,7 +310,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- Weekly Returns: Target vs Replica ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     ax.scatter(best_config['target_returns'], best_config['replica_returns'], alpha=0.5)
     ax.plot([-0.1, 0.1], [-0.1, 0.1], 'r--')  # Diagonal line
     ax.set_title('Weekly returns: target vs replica')
@@ -307,7 +322,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None):
 
     # --- Rolling Correlation ---
     fig, ax = plt.subplots(figsize=(12, 6))
-    apply_dark_theme(fig, ax)
+    apply_theme(fig, ax, theme)
     rolling_corr = best_config['replica_returns'].rolling(window=26).corr(best_config['target_returns'])
     ax.plot(rolling_corr, color='blue')
     ax.set_title('Rolling 26-Week correlation')

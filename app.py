@@ -14,19 +14,9 @@ import os
 
 print(f"Current working directory: {os.getcwd()}")
 
-st.set_page_config(page_title="Hedge Fund Replication", layout="wide")
-st.markdown("""
-    <style>
-    .block-container {
-        background-color: transparent;
-    }
-    .css-1d391kg {
-        background-color: transparent;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("🏦 Hedge Fund Replication")
+theme = st.sidebar.selectbox("Plot Theme", ["White", "Dark"])
+
 st.sidebar.title("Navigation")
 
 page = st.sidebar.radio("Choose Section", [
@@ -79,27 +69,30 @@ def show_eda():
     st.dataframe(df_cleaned_imp_LLL1.head(3))
     #st.image(figs[1], caption="Correlation Matrix")  # implement from your notebook
 
-    fig0 = plot_correlation_matrix_st(df_cleaned_imp_LLL1, title="Correlation Matrix of LLL1 Imputed Data")
+    fig0 = plot_correlation_matrix_st(df_cleaned_imp_LLL1, title="Correlation Matrix of LLL1 Imputed Data", theme=theme)
     st.pyplot(fig0)
 
     st.markdown("### LLL1 Imputed Data Overview")
     st.markdown("LLL1 had some missing data, we relied on pulling values using TvDataFeed module")
-    st.image(figs[0], caption="LLL1 Imputed Data Overview")
-
+    
+    if theme=="Light":
+        st.image(figs[0], caption="LLL1 Imputed Data Overview")
+    else:
+        st.image(figs[1], caption="LLL1 Imputed Data Overview")
     st.markdown("### Select an index to explore:")
     selected_index = st.selectbox("Choose an index", indices.columns.tolist())
 
     if st.button("PLOT"):
         st.subheader(f"Time Series: {selected_index}")
-        fig1 = plot_series_st(df_cleaned_imp_LLL1, selected_index, title=f"{selected_index} Over Time")
+        fig1 = plot_series_st(df_cleaned_imp_LLL1, selected_index, title=f"{selected_index} Over Time", theme=theme)
         st.pyplot(fig1)
 
         st.subheader(f"ACF & PACF: {selected_index}")
-        fig2 = plot_acf_pacf_st(df_cleaned_imp_LLL1[selected_index], lags=20, title_prefix=selected_index)
+        fig2 = plot_acf_pacf_st(df_cleaned_imp_LLL1[selected_index], lags=20, title_prefix=selected_index, theme=theme)
         st.pyplot(fig2)
 
         st.subheader(f"Rolling Mean & Std: {selected_index}")
-        fig3 = plot_rolling_stats_st(df_cleaned_imp_LLL1[selected_index], window=20, title=f"{selected_index} Rolling Stats")
+        fig3 = plot_rolling_stats_st(df_cleaned_imp_LLL1[selected_index], window=20, title=f"{selected_index} Rolling Stats", theme=theme)
         st.pyplot(fig3)
 
 # Prepare data
@@ -296,12 +289,12 @@ def show_evaluation():
     """)
 
     st.markdown("#### Cumulative Returns and Key Metrics")
-    display_backtest_result(best_result_obj)
+    display_backtest_result(best_result_obj, theme=theme)
 
     st.markdown("#### Detailed Diagnostics")
     st.info("Below are detailed plots and diagnostics for the best model, including drawdowns, exposures, VaR, and more.")
     best_config = prepare_plotting_config(best_result_obj, best_config_params)
-    plot_detailed_results(best_config, X, max_var_threshold=0.08)
+    plot_detailed_results(best_config, X, max_var_threshold=0.08, theme=theme)
 
 if page == "📊 Data Analysis":
     show_eda()
