@@ -15,6 +15,7 @@ import os
 print(f"Current working directory: {os.getcwd()}")
 
 st.title("🏦 Hedge Fund Replication")
+st.set_page_config(page_title="Hedge Fund Replication", layout="wide")
 theme = st.sidebar.selectbox("Plot Theme", ["White", "Dark"])
 
 st.sidebar.title("Navigation")
