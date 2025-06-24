@@ -14,7 +14,7 @@ import os
 
 print(f"Current working directory: {os.getcwd()}")
 
-st.title("🏦 Hedge Fund Replication")
+st.title("🏦 ReplicApp")
 st.set_page_config(page_title="Hedge Fund Replication", layout="wide")
 theme = st.sidebar.selectbox("Plot Theme", ["White", "Dark"])
 
@@ -64,7 +64,29 @@ def show_characterisation():
     Answer a few questions to help us understand your investment style and build a custom index to replicate.
     """)
 
-    # --- Risk Profile Quiz ---
+    index_options = {
+            'HFRXGL': "HFRX Global Hedge Fund Index",
+            'LEGATRUU': "Bloomberg Global Aggregate Bond",
+            'MXWO': "MSCI World",
+            'MXWD': "MSCI ACWI"
+        }
+
+    # --- Preset values for weights ---
+    default_weights = {
+            "Conservative": {'HFRXGL': 0.15, 'LEGATRUU': 0.7, 'MXWO': 0.1, 'MXWD': 0.05},
+            "Balanced": {'HFRXGL': 0.2, 'LEGATRUU': 0.3, 'MXWO': 0.35, 'MXWD': 0.15},
+            "Growth Seeking": {'HFRXGL': 0.2, 'LEGATRUU': 0.1, 'MXWO': 0.5, 'MXWD': 0.2},
+            "Risk Maximiser": {'HFRXGL': 0.1, 'LEGATRUU': 0., 'MXWO': 0.65, 'MXWD': 0.25}
+        }
+
+    # --- Preset values for constraints ---
+    preset_values = {
+        "Conservative": {"max_gross": 1.2, "max_var": 0.05, "min_turnover":0.05, "max_turnover": 0.08},
+        "Balanced":     {"max_gross": 1.5, "max_var": 0.08, "min_turnover": 0.02, "max_turnover": 0.10},
+        "Growth Seeking":    {"max_gross": 1.7, "max_var": 0.12,"min_turnover": 0.01, "max_turnover": 0.15},
+        "Risk Maximiser":        {"max_gross": 2.0, "max_var": 0.2, "min_turnover": 0.01, "max_turnover": 0.25},
+        }
+    
     # --- Risk Profile Quiz ---
     q1 = st.radio(
         "How much risk are you comfortable taking with your investments?",
@@ -123,6 +145,16 @@ def show_characterisation():
         else:
             preset = "Risk Maximiser"
         st.session_state.preset = preset
+
+        # Reset dependent state variables when preset changes
+        for k, v in default_weights[preset].items():
+            st.session_state[f"weight_{k}"] = v
+
+        # Reset constraint sliders to reflect new preset
+        st.session_state["max_gross"] = preset_values[preset]["max_gross"]
+        st.session_state["max_var"] = preset_values[preset]["max_var"]
+        st.session_state["min_turnover"] = preset_values[preset]["min_turnover"]
+        st.session_state["max_turnover"] = preset_values[preset]["max_turnover"]
     else:
         preset = st.session_state.get("preset", "Conservative")  # fallback
 
@@ -141,26 +173,14 @@ def show_characterisation():
         st.markdown("---")
         st.markdown("### Choose Your Target Index Blend")
         st.markdown("Select the hedge fund indices and weights you want to replicate:")
-
-        index_options = {
-            'HFRXGL': "HFRX Global Hedge Fund Index",
-            'LEGATRUU': "Bloomberg Global Aggregate Bond",
-            'MXWO': "MSCI World",
-            'MXWD': "MSCI ACWI"
-        }
-        default_weights = {
-            "Conservative": {'HFRXGL': 0.15, 'LEGATRUU': 0.7, 'MXWO': 0.1, 'MXWD': 0.05},
-            "Balanced": {'HFRXGL': 0.2, 'LEGATRUU': 0.3, 'MXWO': 0.35, 'MXWD': 0.15},
-            "Growth Seeking": {'HFRXGL': 0.2, 'LEGATRUU': 0.1, 'MXWO': 0.5, 'MXWD': 0.2},
-            "Risk Maximiser": {'HFRXGL': 0.1, 'LEGATRUU': 0., 'MXWO': 0.65, 'MXWD': 0.25}
-        }
+        
         weights = {}
         st.markdown("Adjust the sliders to set your preferred blend (must sum to 1.0):")
         total = 0
         for idx, label in index_options.items():
             # Use session_state if exists, else default
             slider_key = f"weight_{idx}"
-            default_val = st.session_state.get(slider_key, float(default_weights[preset].get(idx, 0.0)))
+            default_val = st.session_state.get(idx, float(default_weights[preset].get(idx, 0.0)))
             w = st.slider(
                 f"{label} ({idx})",
                 0.0, 1.0, default_val, 0.05,
@@ -173,13 +193,7 @@ def show_characterisation():
 
         st.session_state.index_weights = weights
 
-    # --- Preset values for constraints ---
-    preset_values = {
-        "Conservative": {"max_gross": 1.2, "max_var": 0.05, "min_turnover":0.05, "max_turnover": 0.08},
-        "Balanced":     {"max_gross": 1.5, "max_var": 0.08, "min_turnover": 0.02, "max_turnover": 0.10},
-        "Growth Seeking":    {"max_gross": 1.7, "max_var": 0.12,"min_turnover": 0.01, "max_turnover": 0.15},
-        "Risk Maximiser":        {"max_gross": 2.0, "max_var": 0.2, "min_turnover": 0.01, "max_turnover": 0.25},
-    }
+    
 
     # Use session_state for constraints if available, else preset
     init_gross = st.session_state.get("max_gross", preset_values[preset]["max_gross"])
