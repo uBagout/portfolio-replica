@@ -59,6 +59,9 @@ def load_results():
     return res
 
 def show_characterisation():
+    if "last_applied_preset" not in st.session_state:
+        st.session_state.last_applied_preset = None
+
     st.header("🧑‍💼 Investor Profile")
     st.markdown("""
     Answer a few questions to help us understand your investment style and build a custom index to replicate.
@@ -147,14 +150,17 @@ def show_characterisation():
         st.session_state.preset = preset
 
         # Reset dependent state variables when preset changes
-        for k, v in default_weights[preset].items():
-            st.session_state[f"weight_{k}"] = v
+        # Update preset and defaults only if changed
+        if st.session_state.get("last_applied_preset") != preset:
+            st.session_state.preset = preset
+            st.session_state.last_applied_preset = preset
 
-        # Reset constraint sliders to reflect new preset
-        st.session_state["max_gross"] = preset_values[preset]["max_gross"]
-        st.session_state["max_var"] = preset_values[preset]["max_var"]
-        st.session_state["min_turnover"] = preset_values[preset]["min_turnover"]
-        st.session_state["max_turnover"] = preset_values[preset]["max_turnover"]
+            # Set new defaults
+            for k, v in default_weights[preset].items():
+                st.session_state[f"weight_{k}"] = v
+
+            for k, v in preset_values[preset].items():
+                st.session_state[k] = v
     else:
         preset = st.session_state.get("preset", "Conservative")  # fallback
 
@@ -180,14 +186,14 @@ def show_characterisation():
         for idx, label in index_options.items():
             # Use session_state if exists, else default
             slider_key = f"weight_{idx}"
-            default_val = st.session_state.get(idx, float(default_weights[preset].get(idx, 0.0)))
-            w = st.slider(
+            default_val = st.session_state.get(slider_key, float(default_weights[preset].get(idx, 0.0)))
+            st.slider(
                 f"{label} ({idx})",
                 0.0, 1.0, default_val, 0.05,
                 key=slider_key
             )
-            weights[idx] = w
-            total += w
+            weights[idx] = st.session_state[slider_key]
+            total += weights[idx]
         if abs(total - 1.0) > 0.01:
             st.warning("Weights should sum to 1.0 for a valid index blend.")
 
