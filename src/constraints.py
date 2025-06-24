@@ -1,15 +1,27 @@
 import numpy as np
+from scipy.stats import norm
+import streamlit as st
 
 def apply_constraints(original_weights, constraint_funcs, weights_history, replica_returns, constraints_history, 
                       constraint_params={
-    'constraint_gross_exposure': [2.0],
-    'constraint_var_historical': [0.2, 0.01, 4],
-    'constraint_turnover_band': [0.02, 0.10]
+    'max_gross': 2.0,
+    'max_var': 0.2,
+    'min_turnover': 0.02,
+    'max_turnover': 0.10
                       }):
     total_rescale = 1.0
     if constraint_funcs is not None:
         for fn in constraint_funcs:
-            original_weights, metadata = fn(original_weights, weights_history, replica_returns, **constraint_params.get(fn.__name__, {}))
+            if fn.__name__ == 'constraint_gross_exposure':
+                cstr_param = constraint_params.get('max_gross', 2.0)
+                original_weights, metadata = fn(original_weights, weights_history, replica_returns, max_gross= cstr_param)
+            elif fn.__name__ == 'constraint_var_historical':
+                cstr_param = constraint_params.get('max_var', 0.08)
+                original_weights, metadata = fn(original_weights, weights_history, replica_returns, max_var = cstr_param)
+            elif fn.__name__ == 'constraint_turnover_band':
+                cstr_param = [constraint_params.get('min_turnover', 0.02),
+                              constraint_params.get('max_turnover', 0.10)]
+                original_weights, metadata = fn(original_weights, weights_history, replica_returns, turnover_bounds = cstr_param)
             constraints_history[fn.__name__].append(metadata)
             total_rescale *= metadata.get('rescale_factor')
     return original_weights, total_rescale
@@ -52,8 +64,7 @@ def constraint_turnover_band(
     weights: np.ndarray,
     weights_history: list,
     replica_returns: list,
-    min_turnover: float = 0.02,
-    max_turnover: float = 0.10
+    turnover_bounds = [0.02, 0.10]
 ) -> tuple[np.ndarray, dict]:
     """
     Enforce both a minimum no-trade threshold and a maximum turnover cap.
@@ -75,6 +86,8 @@ def constraint_turnover_band(
     -------
     new_weights, metadata : (np.ndarray, dict)
     """
+    min_turnover, max_turnover = turnover_bounds
+
     metadata = {
         'activated_min': False,
         'activated_max': False,
@@ -107,11 +120,7 @@ def constraint_turnover_band(
     return weights, metadata
 
 
-import numpy as np
-from scipy.stats import norm
-
-
-def calculate_var(returns, method: str, confidence: float = 0.01, horizon: int = 4) -> float:
+def calculate_var(returns, method: str, confidence = 0.01, horizon = 4) -> float:
     """
     Calculate Value at Risk (VaR) over a given time horizon.
 
@@ -131,6 +140,7 @@ def calculate_var(returns, method: str, confidence: float = 0.01, horizon: int =
     var : float
         Positive number representing the loss at the given confidence/day horizon.
     """
+
     r = np.asarray(returns)
     if method == 'gaussian':
         mu, sigma = np.mean(r), np.std(r)
@@ -144,16 +154,13 @@ def calculate_var(returns, method: str, confidence: float = 0.01, horizon: int =
         var = -hist_q * np.sqrt(horizon)
     else:
         raise ValueError(f"Unknown VaR method '{method}'")
-    return var
+    return var[0]
 
 def constraint_var_historical(
     weights: np.ndarray,
     weights_history: list,
     replica_returns: list,
     max_var: float = 0.08,
-    var_confidence: float = 0.01,
-    var_horizon: int = 4,
-    lookback: int = 20
 ) -> tuple[np.ndarray, dict]:
     """
     Project weights to satisfy a maximum historical VaR constraint.
@@ -180,6 +187,11 @@ def constraint_var_historical(
     new_weights, metadata : (np.ndarray, dict)
         Possibly rescaled weights and a metadata dict describing the adjustment.
     """
+
+    var_confidence: float = 0.01,
+    var_horizon: int = 4,
+    lookback: int = 20
+
     metadata = {
         'activated': False,
         'estimated_var': np.nan,

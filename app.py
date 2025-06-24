@@ -211,10 +211,10 @@ def show_characterisation():
 
         if gross_exposure:
             constraint_funcs.append(constraint_gross_exposure)
-        if var_constraint:
-            constraint_funcs.append(constraint_var_historical)
         if turnover_constraint:
             constraint_funcs.append(constraint_turnover_band)
+        if var_constraint:
+            constraint_funcs.append(constraint_var_historical)
 
         # Save constraint values to session_state
         if gross_exposure:
@@ -227,7 +227,7 @@ def show_characterisation():
             min_turnover = st.slider("Min Turnover (No-Trade Band)", 0.0, 0.10, init_min_turnover, step=0.01, key="min_turnover")
             max_turnover = st.slider("Max Turnover Cap", 0.05, 0.50, init_max_turnover, step=0.01, key="max_turnover")
 
-    X, y = prepare_X_y(df_cleaned_imp_LLL1, indices, st.session_state.index_weights)
+    X, y = prepare_X_y(indices, futures_cleaned_imp_LLL1, st.session_state.index_weights)
     st.session_state.X = X #for plotting later
     if st.button("Tune Models"):
         with st.spinner("Tuning models, please wait..."):
@@ -239,8 +239,6 @@ def show_characterisation():
                 constraint_params={
                     'max_gross': st.session_state.get('max_gross') if gross_exposure else None,
                     'max_var': st.session_state.get('max_var') if var_constraint else None,
-                    'var_confidence': 0.01,
-                    'var_horizon': 4,
                     'min_turnover': st.session_state.get('min_turnover') if turnover_constraint else None,
                     'max_turnover': st.session_state.get('max_turnover') if turnover_constraint else None
                 },
@@ -291,24 +289,15 @@ def show_evaluation():
 
     st.markdown("---")
     st.subheader("🏆 Best Model Analysis")
-    st.markdown(f"""
-    The best model is **{best_result_obj.model_name.capitalize()}**  
-    - **Correlation to target:** `{df_summaries.loc[best_model_idx, 'corr']:.3f}`
-    - **Sharpe Ratio:** `{df_summaries.loc[best_model_idx, 'sharpe']:.3f}`
-    - **Information Ratio:** `{df_summaries.loc[best_model_idx, 'IR']:.3f}`
-    - **Tracking Error:** `{df_summaries.loc[best_model_idx, 'TE']:.3f}`
-    - **Transaction Costs:** `{df_summaries.loc[best_model_idx, 'transaction_costs']:.6f}`
-    - **Parameters:** `{best_result_obj.model_params}`
-    """)
+    st.markdown(f"### The best model is **{best_result_obj.model_name.capitalize()}**")
 
-    st.markdown("#### Cumulative Returns and Key Metrics")
-    display_backtest_result(best_result_obj, theme=theme)
+    #display_backtest_result(best_result_obj, theme=theme)
 
     st.markdown("#### Detailed Diagnostics")
     st.info("Below are detailed plots and diagnostics for the best model, including drawdowns, exposures, VaR, and more.")
     best_config = prepare_plotting_config(best_result_obj, best_config_params)
     st.info(st.session_state.index_weights)
-    plot_detailed_results(best_config, st.session_state.X, save_dir= results_dir ,max_var_threshold=0.08, theme=theme)
+    plot_detailed_results(best_config, st.session_state.X, save_dir= results_dir ,max_var_threshold=st.session_state.get('max_var', 0.08), theme=theme)
 
 if page == "🧑‍💼 Investor Profile":
     show_characterisation()

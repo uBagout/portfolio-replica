@@ -367,6 +367,7 @@ def run_single_backtest_experiment(config: dict) -> BacktestResult:
         - window: int
         - step: int
         - constraint_funcs: list or None
+        - constraint_params: dict
     """
     model_name = config['model_name']
     model_params = config['model_params']
