@@ -211,6 +211,7 @@ def simulate_backtest(
     replica_returns_net = []
     target_returns = []
     dates = []
+    transaction_costs = []
 
     # Initialize constraints history
     constraints_history = {fn.__name__: [] for fn in constraint_funcs} if constraint_funcs else {}
@@ -247,6 +248,8 @@ def simulate_backtest(
             cost_rate=0.0004
         )
 
+        transaction_costs.append(transaction_cost)
+
         replica_return_net = replica_return_gross - transaction_cost
 
         # Record data
@@ -265,6 +268,7 @@ def simulate_backtest(
     replica_returns_gross = pd.Series(replica_returns_gross, index=dates, name='replica_returns')
     replica_returns_net = pd.Series(replica_returns_net, index=dates, name='replica_returns')
     target_returns = pd.Series(target_returns, index=dates, name='target_returns')
+    transaction_costs = pd.Series(transaction_costs, index=dates, name='transaction_costs')
 
     # Compute aggregate metrics
     aggregate_metrics = compute_aggregate_metrics(
@@ -276,6 +280,7 @@ def simulate_backtest(
         rescale_history=rescale_history,
         weights_history=weights_history,
         config_params=model_params,
+        transaction_costs=transaction_costs,
     )
     # Get the model name from the actual regressor within the pipeline
     model_name_in_pipeline = type(model.named_steps['regressor']).__name__
@@ -293,7 +298,8 @@ def simulate_backtest(
         replica_returns=replica_returns_net,
         target_returns=target_returns,
         aggregate_metrics=aggregate_metrics,
-        constraints_history=constraints_history
+        constraints_history=constraints_history,
+        transaction_costs=transaction_costs
     )
 
 def generate_backtest_splits(

@@ -87,7 +87,8 @@ def compute_aggregate_metrics(
     scaling_factors: list,
     rescale_history: list,
     weights_history: list,
-    config_params: dict
+    config_params: dict,
+    transaction_costs: pd.Series
 ) -> dict:
     """Compute overall evaluation metrics for backtest."""
     # Compute cumulative returns for both target and replica
@@ -136,7 +137,9 @@ def compute_aggregate_metrics(
         'avg_var':np.nanmean(var),
         'scaling_factors': scaling_factors,
         'rescale_history': rescale_history,
-        'weights_history': weights_history
+        'weights_history': weights_history,
+        'transaction_costs': transaction_costs,
+        'transaction_costs_sum': transaction_costs.sum(),
     }
 
 
@@ -197,7 +200,7 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None, them
         'Metric': ['Annualized return', 'Annualized volatility', 'Sharpe ratio',
                    'Max Drawdown', 'Tracking Error', 'Information ratio',
                    'Correlation', 'Average gross exposure', 'Average VaR (1%, 1M)',
-                   'Rolling Window'],
+                   'Rolling Window', 'Transaction Costs'],
         'Target': [f"{best_config['target_mean_return']*100:.2f}%",
                    f"{best_config['target_vol']*100:.2f}%",
                    f"{best_config['target_sharpe']:.2f}",
@@ -207,7 +210,8 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None, them
                    "N/A",
                    "N/A",
                    "N/A",
-                   "N/A"],
+                   "N/A",
+                   "N/A",],
         'Replica': [f"{best_config['replica_mean_return']*100:.2f}%",
                     f"{best_config['replica_vol']*100:.2f}%",
                     f"{best_config['replica_sharpe']:.2f}",
@@ -217,7 +221,8 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None, them
                     f"{best_config['correlation']:.4f}",
                     f"{best_config['avg_gross_exposure']:.4f}",
                     f"{best_config['avg_var']*100:.2f}%",
-                    f"{best_config['rolling_window']}"]
+                    f"{best_config['rolling_window']}",
+                    f"{best_config['transaction_costs_sum']:.4f}",],
         })
 
     st.markdown("#### Detailed metrics for the best configuration (normalized returns):")
@@ -334,6 +339,19 @@ def plot_detailed_results(best_config, X, max_var_threshold, save_dir=None, them
     ax.grid(True)
     plt.tight_layout()
     st.pyplot(fig)
+
+    # --- Transaction Costs ---
+    fig, ax = plt.subplots(figsize=(12, 6))
+    apply_theme(fig, ax, theme)
+    transaction_costs = best_config['transaction_costs']
+    ax.plot(transaction_costs, color='green')
+    ax.set_title('Transaction Costs over Time')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Cost')
+    ax.grid(True)
+    plt.tight_layout()
+    st.pyplot(fig)
+
 
 
 

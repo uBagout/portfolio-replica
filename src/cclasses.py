@@ -15,6 +15,7 @@ class BacktestResult:
     target_returns: pd.Series
     aggregate_metrics: dict
     constraints_history: dict
+    transaction_costs: pd.Series
 
     def summary(self):
         return {
@@ -22,6 +23,7 @@ class BacktestResult:
             'sharpe': self.aggregate_metrics.get('replica_sharpe'),
             'IR': self.aggregate_metrics.get('information_ratio'),
             'TE': self.aggregate_metrics.get('tracking_error'),
-            'corr': self.aggregate_metrics.get('correlation')
+            'corr': self.aggregate_metrics.get('correlation'),
+            'transaction_costs': self.aggregate_metrics.get('transaction_costs_sum'),
         }
     

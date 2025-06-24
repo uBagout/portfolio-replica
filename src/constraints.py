@@ -3,7 +3,7 @@ import numpy as np
 def apply_constraints(original_weights, constraint_funcs, weights_history, replica_returns, constraints_history, 
                       constraint_params={
     'constraint_gross_exposure': [2.0],
-    'constraint_var_historical': [0.08, 0.01, 4],
+    'constraint_var_historical': [0.2, 0.01, 4],
     'constraint_turnover_band': [0.02, 0.10]
                       }):
     total_rescale = 1.0

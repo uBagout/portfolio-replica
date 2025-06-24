@@ -21,8 +21,7 @@ theme = st.sidebar.selectbox("Plot Theme", ["White", "Dark"])
 st.sidebar.title("Navigation")
 
 page = st.sidebar.radio("Choose Section", [
-    "📊 Data Analysis",
-    "🧠 Tuning",
+    "🧑‍💼 Investor Profile",
     "📈 Evaluation",
 ])
 
@@ -59,146 +58,143 @@ def load_results():
             st.error(f"Could not load result for {m}: {e}")
     return res
 
-def show_eda():
-    figs = return_figures()
+def show_characterisation():
+    st.header("🧑‍💼 Investor Profile")
+    st.markdown("""
+    Answer a few questions to help us understand your investment style and build a custom index to replicate.
+    """)
 
-    st.header("Exploratory Data Analysis")
-    
-    st.markdown("### Raw Data")
-        
-        #
-    st.dataframe(df_cleaned_imp_LLL1.head(3))
-    #st.image(figs[1], caption="Correlation Matrix")  # implement from your notebook
-
-    fig0 = plot_correlation_matrix_st(df_cleaned_imp_LLL1, title="Correlation Matrix of LLL1 Imputed Data", theme=theme)
-    st.pyplot(fig0)
-
-    st.markdown("### LLL1 Imputed Data Overview")
-    st.markdown("LLL1 had some missing data, we relied on pulling values using TvDataFeed module")
-    
-    if theme=="Light":
-        st.image(figs[0], caption="LLL1 Imputed Data Overview")
-    else:
-        st.image(figs[1], caption="LLL1 Imputed Data Overview")
-    st.markdown("### Select an index to explore:")
-    selected_index = st.selectbox("Choose an index", indices.columns.tolist())
-
-    if st.button("PLOT"):
-        st.subheader(f"Time Series: {selected_index}")
-        fig1 = plot_series_st(df_cleaned_imp_LLL1, selected_index, title=f"{selected_index} Over Time", theme=theme)
-        st.pyplot(fig1)
-
-        st.subheader(f"ACF & PACF: {selected_index}")
-        fig2 = plot_acf_pacf_st(df_cleaned_imp_LLL1[selected_index], lags=20, title_prefix=selected_index, theme=theme)
-        st.pyplot(fig2)
-
-        st.subheader(f"Rolling Mean & Std: {selected_index}")
-        fig3 = plot_rolling_stats_st(df_cleaned_imp_LLL1[selected_index], window=20, title=f"{selected_index} Rolling Stats", theme=theme)
-        st.pyplot(fig3)
-
-# Prepare data
-index_weights = {
-    'HFRXGL': 0.50,
-    'LEGATRUU': 0.25,
-    'MXWO':   0.25,
-    'MXWD':   0.
-}
-X, y = prepare_X_y(indices, futures_cleaned_imp_LLL1, index_weights)
-
-def show_tuning():
-    st.header("🧠 Tuning")
-
-   # --- Risk Profile Quiz ---
-    st.markdown("#### Let's find your risk profile!")
-
+    # --- Risk Profile Quiz ---
+    # --- Risk Profile Quiz ---
     q1 = st.radio(
-        "1. How much risk are you comfortable taking with your investments?",
+        "How much risk are you comfortable taking with your investments?",
         [
             ("🟢 I prefer to avoid risk and preserve my capital.", 0),
             ("🟡 I’m comfortable with some risk for moderate returns.", 1),
             ("🟠 I want to grow my investments and can accept higher ups and downs.", 2),
             ("🔴 I want to maximize returns and am comfortable with large swings in value.", 3)
         ],
-        format_func=lambda x: x[0]
+        format_func=lambda x: x[0],
+        key="q1"
     )
     q2 = st.radio(
-        "2. How would you feel if your portfolio dropped 10% in a month?",
+        "How would you feel if your portfolio dropped 10% in a month?",
         [
             ("😱 Very uncomfortable, I want to minimize losses.", 0),
             ("😬 Somewhat uncomfortable, but I can tolerate it.", 1),
             ("🙂 Not too worried, I expect some volatility.", 2),
             ("😎 I see it as an opportunity to gain more in the long run.", 3)
         ],
-        format_func=lambda x: x[0]
+        format_func=lambda x: x[0],
+        key="q2"
     )
     q3 = st.radio(
-        "3. What is your main investment goal?",
+        "What is your main investment goal?",
         [
             ("🛡️ Preserve my wealth with minimal risk.", 0),
             ("⚖️ Balance between growth and safety.", 1),
             ("🚀 Grow my wealth, accepting some risk.", 2),
             ("🎢 Maximize returns, even if it means big ups and downs.", 3)
         ],
-        format_func=lambda x: x[0]
+        format_func=lambda x: x[0],
+        key="q3"
     )
     q4 = st.radio(
-        "4. How long do you plan to keep your money invested?",
+        "How long do you plan to keep your money invested?",
         [
             ("⏳ Less than 3 years.", 0),
             ("🕰️ 3–5 years.", 1),
             ("🕰️ 5–10 years.", 2),
             ("🕰️ 10+ years.", 3)
         ],
-        format_func=lambda x: x[0]
+        format_func=lambda x: x[0],
+        key="q4"
     )
 
-    score = q1[1] + q2[1] + q3[1] + q4[1]
-
-    if score <= 2:
-        st.session_state.preset = "Conservative"
-    elif score <= 5:
-        st.session_state.preset = "Balanced"
-    elif score <= 8:
-        st.session_state.preset = "Growth Seeking"
+    # Only set preset if all questions are answered (not None)
+    if all(x is not None for x in [q1, q2, q3, q4]):
+        score = q1[1] + q2[1] + q3[1] + q4[1]
+        if score <= 2:
+            preset = "Conservative"
+        elif score <= 5:
+            preset = "Balanced"
+        elif score <= 8:
+            preset = "Growth Seeking"
+        else:
+            preset = "Risk Maximiser"
+        st.session_state.preset = preset
     else:
-        st.session_state.preset = "Risk Maximiser"
+        preset = st.session_state.get("preset", "Conservative")  # fallback
 
-    st.success(f"**Your suggested risk profile is: {st.session_state.preset}**")
+
+    st.success(f"**Your suggested risk profile is: {preset}**")
 
     profile_descriptions = {
-    "Conservative": "🟢 You prioritise capital preservation and minimal risk. Ideal for short-term goals or low tolerance for loss.",
-    "Balanced": "🟡 You aim for a mix of stability and growth. Moderate tolerance for risk and medium-term investment goals.",
-    "Growth Seeking": "🟠 You focus on long-term capital growth and accept significant short-term fluctuations.",
-    "Risk Maximiser": "🔴 You’re comfortable with high risk and volatility in exchange for the potential of high returns."
+        "Conservative": "🟢 You prioritise capital preservation and minimal risk. Designed for investors like retirees or very cautious savers. This portfolio protects principal, avoids large drawdowns, and generates steady bond income with low volatility.",
+        "Balanced": "🟡 You aim for a mix of stability and growth. A true 60/40-style strategy with a modern twist. Suitable for mid-career professionals or risk-aware investors aiming for reliable long-term growth with fewer shocks.",
+        "Growth Seeking": "🟠 You focus on long-term capital growth. Best suited for long-term investors who want growth but value smart risk management. This portfolio combines global equity exposure with tactical alternatives and modest stability.",
+        "Risk Maximiser": "🔴 You’re comfortable with high risk and volatility. This is for fearless, return-hungry investors who can handle market swings. No bonds means no drag — and no cushion. Suitable only for those with long horizons and strong nerves."
     }
+    st.info(profile_descriptions.get(preset, ""))
 
-    st.info(profile_descriptions.get(st.session_state.preset, ""))
+    with st.expander("Index split (advanced users only)", expanded=False):
+        st.markdown("---")
+        st.markdown("### Choose Your Target Index Blend")
+        st.markdown("Select the hedge fund indices and weights you want to replicate:")
+
+        index_options = {
+            'HFRXGL': "HFRX Global Hedge Fund Index",
+            'LEGATRUU': "Bloomberg Global Aggregate Bond",
+            'MXWO': "MSCI World",
+            'MXWD': "MSCI ACWI"
+        }
+        default_weights = {
+            "Conservative": {'HFRXGL': 0.15, 'LEGATRUU': 0.7, 'MXWO': 0.1, 'MXWD': 0.05},
+            "Balanced": {'HFRXGL': 0.2, 'LEGATRUU': 0.3, 'MXWO': 0.35, 'MXWD': 0.15},
+            "Growth Seeking": {'HFRXGL': 0.2, 'LEGATRUU': 0.1, 'MXWO': 0.5, 'MXWD': 0.2},
+            "Risk Maximiser": {'HFRXGL': 0.1, 'LEGATRUU': 0., 'MXWO': 0.65, 'MXWD': 0.25}
+        }
+        weights = {}
+        st.markdown("Adjust the sliders to set your preferred blend (must sum to 1.0):")
+        total = 0
+        for idx, label in index_options.items():
+            # Use session_state if exists, else default
+            slider_key = f"weight_{idx}"
+            default_val = st.session_state.get(slider_key, float(default_weights[preset].get(idx, 0.0)))
+            w = st.slider(
+                f"{label} ({idx})",
+                0.0, 1.0, default_val, 0.05,
+                key=slider_key
+            )
+            weights[idx] = w
+            total += w
+        if abs(total - 1.0) > 0.01:
+            st.warning("Weights should sum to 1.0 for a valid index blend.")
+
+        st.session_state.index_weights = weights
 
     # --- Preset values for constraints ---
     preset_values = {
-        "Conservative": {"max_gross": 1.2, "max_var": 0.03, "var_confidence": 0.01, "min_turnover":0.05, "max_turnover": 0.08},
-        "Balanced":     {"max_gross": 1.5, "max_var": 0.06,"var_confidence": 0.01, "min_turnover": 0.02, "max_turnover": 0.10},
-        "Growth Seeking":    {"max_gross": 2.0, "max_var": 0.08, "var_confidence": 0.05,"min_turnover": 0.01, "max_turnover": 0.15},
-        "Risk Maximiser":        {"max_gross": 3.0, "max_var": 0.12, "var_confidence": 0.05, "min_turnover": 0.01, "max_turnover": 0.25},
+        "Conservative": {"max_gross": 1.2, "max_var": 0.05, "min_turnover":0.05, "max_turnover": 0.08},
+        "Balanced":     {"max_gross": 1.5, "max_var": 0.08, "min_turnover": 0.02, "max_turnover": 0.10},
+        "Growth Seeking":    {"max_gross": 1.7, "max_var": 0.12,"min_turnover": 0.01, "max_turnover": 0.15},
+        "Risk Maximiser":        {"max_gross": 2.0, "max_var": 0.2, "min_turnover": 0.01, "max_turnover": 0.25},
     }
 
-    preset = st.session_state.get("preset", "Balanced")
-    max_gross = preset_values[preset]["max_gross"]
-    max_var = preset_values[preset]["max_var"]
-    var_confidence = preset_values[preset]["var_confidence"] 
-    max_turnover = preset_values[preset]["max_turnover"]
-    min_turnover = preset_values[preset]["min_turnover"]
+    # Use session_state for constraints if available, else preset
+    init_gross = st.session_state.get("max_gross", preset_values[preset]["max_gross"])
+    init_max_var = st.session_state.get("max_var", preset_values[preset]["max_var"])
+    init_max_turnover = st.session_state.get("max_turnover", preset_values[preset]["max_turnover"])
+    init_min_turnover = st.session_state.get("min_turnover", preset_values[preset]["min_turnover"])
 
     constraint_funcs = []
 
-    # --- Advanced Options ---
-    with st.expander("Advanced Options (for experts only)", expanded=False):
+    with st.expander("Constraint Options (advanced users only)", expanded=False):
         st.markdown("Modify constraint parameters below if you want fine control.")
-        gross_exposure = st.checkbox("Gross Exposure Constraint", value=True)
-        var_constraint = st.checkbox("VaR Constraint", value=True)
-        turnover_constraint = st.checkbox("Turnover Band Constraint", value=True)
+        gross_exposure = st.checkbox("Gross Exposure Constraint", value=True, key="gross_exposure")
+        var_constraint = st.checkbox("VaR Constraint", value=True, key="var_constraint")
+        turnover_constraint = st.checkbox("Turnover Band Constraint", value=True, key="turnover_constraint")
 
-        
         if gross_exposure:
             constraint_funcs.append(constraint_gross_exposure)
         if var_constraint:
@@ -206,18 +202,19 @@ def show_tuning():
         if turnover_constraint:
             constraint_funcs.append(constraint_turnover_band)
 
+        # Save constraint values to session_state
         if gross_exposure:
-            max_gross = st.slider("Max Gross Exposure", 1.0, 5.0, max_gross, step=0.1)
+            max_gross = st.slider("Max Gross Exposure", 1.0, 5.0, init_gross, step=0.1, key="max_gross")
+            
         if var_constraint:
-            max_var = st.slider("Max VaR (e.g. 0.08 = 8%)", 0.01, 0.20, max_var, step=0.01)
-            var_confidence = st.slider("VaR Confidence Level", 0.01, 0.10, var_confidence, step=0.01)
-            var_horizon = st.slider("VaR Horizon (weeks)", 1, 12, 4, step=1)
-        else:
-            var_horizon = 4
-        if turnover_constraint:
-            min_turnover = st.slider("Min Turnover (No-Trade Band)", 0.0, 0.10, min_turnover, step=0.01)
-            max_turnover = st.slider("Max Turnover Cap", 0.05, 0.50, max_turnover, step=0.01)
+            max_var = st.slider("Max VaR (e.g. 0.08 = 8%)", 0.01, 0.20, init_max_var, step=0.01, key="max_var")
 
+        if turnover_constraint:
+            min_turnover = st.slider("Min Turnover (No-Trade Band)", 0.0, 0.10, init_min_turnover, step=0.01, key="min_turnover")
+            max_turnover = st.slider("Max Turnover Cap", 0.05, 0.50, init_max_turnover, step=0.01, key="max_turnover")
+
+    X, y = prepare_X_y(df_cleaned_imp_LLL1, indices, st.session_state.index_weights)
+    st.session_state.X = X #for plotting later
     if st.button("Tune Models"):
         with st.spinner("Tuning models, please wait..."):
             models_tuned_results, best_configs = tune_all_models(
@@ -226,19 +223,18 @@ def show_tuning():
                 y=y,
                 constraint_funcs=constraint_funcs,
                 constraint_params={
-                    'max_gross': max_gross,
-                    'max_var': max_var,
-                    'var_confidence': var_confidence,
-                    'var_horizon': var_horizon,
-                    'min_turnover': min_turnover,
-                    'max_turnover': max_turnover
+                    'max_gross': st.session_state.get('max_gross') if gross_exposure else None,
+                    'max_var': st.session_state.get('max_var') if var_constraint else None,
+                    'var_confidence': 0.01,
+                    'var_horizon': 4,
+                    'min_turnover': st.session_state.get('min_turnover') if turnover_constraint else None,
+                    'max_turnover': st.session_state.get('max_turnover') if turnover_constraint else None
                 },
                 step=1,
                 metric_key='information_ratio',
                 save_dir=results_dir
             )
         st.success("Models tuned successfully! Head to Evaluation to see the results")
-
 
 def show_evaluation():
     st.header("📈 Portfolio Evaluation")
@@ -262,9 +258,10 @@ def show_evaluation():
         with col:
             st.markdown(f"**{result_obj.model_name.capitalize()}**")
             st.metric("Sharpe", f"{result_obj.aggregate_metrics['replica_sharpe']:.3f}")
-            st.metric(" ", f"{result_obj.aggregate_metrics['information_ratio']:.3f}")
+            st.metric("IR", f"{result_obj.aggregate_metrics['information_ratio']:.3f}")
             st.metric("TE", f"{result_obj.aggregate_metrics['tracking_error']:.3f}")
             st.metric("Corr", f"{result_obj.aggregate_metrics['correlation']:.3f}")
+            st.metric("TC", f"{result_obj.aggregate_metrics['transaction_costs_sum']:.5f}")
             st.caption(f"Params: `{result_obj.model_params}`")
         # Collect for best model selection
         summary = result_obj.summary()
@@ -286,6 +283,7 @@ def show_evaluation():
     - **Sharpe Ratio:** `{df_summaries.loc[best_model_idx, 'sharpe']:.3f}`
     - **Information Ratio:** `{df_summaries.loc[best_model_idx, 'IR']:.3f}`
     - **Tracking Error:** `{df_summaries.loc[best_model_idx, 'TE']:.3f}`
+    - **Transaction Costs:** `{df_summaries.loc[best_model_idx, 'transaction_costs']:.6f}`
     - **Parameters:** `{best_result_obj.model_params}`
     """)
 
@@ -295,13 +293,11 @@ def show_evaluation():
     st.markdown("#### Detailed Diagnostics")
     st.info("Below are detailed plots and diagnostics for the best model, including drawdowns, exposures, VaR, and more.")
     best_config = prepare_plotting_config(best_result_obj, best_config_params)
-    plot_detailed_results(best_config, X, max_var_threshold=0.08, theme=theme)
+    st.info(st.session_state.index_weights)
+    plot_detailed_results(best_config, st.session_state.X, save_dir= results_dir ,max_var_threshold=0.08, theme=theme)
 
-if page == "📊 Data Analysis":
-    show_eda()
-
-elif page == "🧠 Tuning":
-    show_tuning()
+if page == "🧑‍💼 Investor Profile":
+    show_characterisation()
 
 elif page == "📈 Evaluation":
     show_evaluation()
